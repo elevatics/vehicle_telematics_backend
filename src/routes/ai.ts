@@ -6,17 +6,26 @@ const ELEVATICS_CHAT_URL = process.env.ELEVATICS_CHAT_URL || '';
 
 // POST /api/ai/v3/chat  — proxy to elevatics.online, streams SSE back
 router.post('/v3/chat', async (req: Request, res: Response): Promise<void> => {
-  const { message, thread_id, device_id, device_name } = req.body as {
+  const { message, query, thread_id, device_id, device_name } = req.body as {
     message: string;
+    query?: string;
     thread_id?: string;
     device_id?: string;
     device_name?: string;
   };
 
-  if (!message) {
+  const userQuery = query || message;
+
+  if (!userQuery) {
     res.status(400).json({ error: 'message is required' });
     return;
   }
+
+  const contextPrefix = device_name && device_id
+    ? `[Context: The user is asking about vehicle "${device_name}" with device ID ${device_id}. Always use this device ID when querying data for this vehicle. Do NOT ask for the vehicle name.]\n\n`
+    : '';
+
+  const enrichedQuery = contextPrefix + userQuery;
 
   try {
     const upstream = await fetch(ELEVATICS_CHAT_URL, {
@@ -24,7 +33,12 @@ router.post('/v3/chat', async (req: Request, res: Response): Promise<void> => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message, thread_id, device_id, device_name }),
+      body: JSON.stringify({
+        query: enrichedQuery,
+        thread_id,
+        user_id: device_id || 'default',
+        model_id: 'gpt-5.4-nano',
+      }),
     });
 
     if (!upstream.ok || !upstream.body) {

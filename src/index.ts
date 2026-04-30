@@ -20,6 +20,7 @@ import traccarDriversRoutes from './routes/traccarDrivers';
 import traccarEventsRoutes from './routes/traccarEvents';
 import positionsRoutes from './routes/positions';
 import aiRoutes from './routes/ai';
+import aiAlertsRoutes from './routes/aiAlerts';
 
 dotenv.config();
 
@@ -88,6 +89,7 @@ app.use('/api/driverlists', traccarDriversRoutes);
 app.use('/api/events', traccarEventsRoutes);
 app.use('/api/positions', positionsRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/ai-alerts', aiAlertsRoutes);
 
 // ── 404 handler ────────────────────────────────────────────────────────────────
 app.use((_req, res) => {

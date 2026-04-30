@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { fetchAllVehicles, getDevice, getLatestPositions, mergeToVehicle, reverseGeocode } from '../services/traccar';
+import { fetchAllVehicles, getDevice, getLatestPositions, mergeToVehicle, reverseGeocode, createDevice, updateDevice, deleteDevice } from '../services/traccar';
 
 const router = Router();
 
@@ -51,6 +51,59 @@ router.get('/:id', requireAuth, async (req: Request, res: Response): Promise<voi
     const mock = MOCK_VEHICLES.find((v) => v.deviceId === deviceId);
     if (mock) { res.json(mock); return; }
     res.status(404).json({ error: 'Vehicle not found' });
+  }
+});
+
+// POST /api/vehicles — create a new device in Traccar
+router.post('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { name, uniqueId, phone, model, contact, category, disabled, groupId, attributes } = req.body;
+  if (!name || !uniqueId) {
+    res.status(400).json({ error: 'name and uniqueId are required' });
+    return;
+  }
+  try {
+    const device = await createDevice({ name, uniqueId, phone, model, contact, category, disabled, groupId, attributes });
+    res.status(201).json(device);
+  } catch (err) {
+    console.error('Failed to create device in Traccar:', (err as Error).message);
+    res.status(502).json({ error: (err as Error).message });
+  }
+});
+
+// PUT /api/vehicles/:id — update an existing device in Traccar
+router.put('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const deviceId = parseInt(req.params.id);
+  if (isNaN(deviceId)) {
+    res.status(400).json({ error: 'Invalid device ID' });
+    return;
+  }
+  const { name, uniqueId, phone, model, contact, category, disabled, groupId, attributes } = req.body;
+  if (!name || !uniqueId) {
+    res.status(400).json({ error: 'name and uniqueId are required' });
+    return;
+  }
+  try {
+    const device = await updateDevice(deviceId, { name, uniqueId, phone, model, contact, category, disabled, groupId, attributes });
+    res.json(device);
+  } catch (err) {
+    console.error('Failed to update device in Traccar:', (err as Error).message);
+    res.status(502).json({ error: (err as Error).message });
+  }
+});
+
+// DELETE /api/vehicles/:id — delete a device from Traccar
+router.delete('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const deviceId = parseInt(req.params.id);
+  if (isNaN(deviceId)) {
+    res.status(400).json({ error: 'Invalid device ID' });
+    return;
+  }
+  try {
+    await deleteDevice(deviceId);
+    res.status(204).send();
+  } catch (err) {
+    console.error('Failed to delete device in Traccar:', (err as Error).message);
+    res.status(502).json({ error: (err as Error).message });
   }
 });
 

@@ -75,6 +75,30 @@ export const getDevices = (): Promise<TraccarDevice[]> =>
 export const getDevice = (id: number): Promise<TraccarDevice> =>
   traccarFetch<TraccarDevice>(`/devices/${id}`);
 
+export interface DevicePayload {
+  name: string;
+  uniqueId: string;
+  status?: string;
+  disabled?: boolean;
+  lastUpdate?: string | null;
+  positionId?: number | null;
+  groupId?: number | null;
+  phone?: string | null;
+  model?: string | null;
+  contact?: string | null;
+  category?: string | null;
+  attributes?: Record<string, unknown>;
+}
+
+export const createDevice = (body: DevicePayload): Promise<TraccarDevice> =>
+  traccarPost<TraccarDevice>('/devices', body);
+
+export const updateDevice = (id: number, body: DevicePayload): Promise<TraccarDevice> =>
+  traccarPut<TraccarDevice>(`/devices/${id}`, { id, ...body });
+
+export const deleteDevice = (id: number): Promise<void> =>
+  traccarDelete(`/devices/${id}`);
+
 // ── Position endpoints ─────────────────────────────────────────────────────────
 
 export const getLatestPositions = (deviceIds?: number[]): Promise<TraccarPosition[]> => {
@@ -187,7 +211,35 @@ export const getEventsReport = (
 
 // ── Notifications ──────────────────────────────────────────────────────────────
 
-export const getNotifications = () => traccarFetch('/notifications');
+export interface TraccarNotification {
+  id?: number;
+  type: string;
+  notificators: string;
+  always?: boolean;
+  calendarId?: number;
+  attributes?: Record<string, unknown>;
+}
+
+export const getNotifications = (): Promise<TraccarNotification[]> =>
+  traccarFetch<TraccarNotification[]>('/notifications');
+
+export const createNotification = (body: TraccarNotification): Promise<TraccarNotification> =>
+  traccarPost<TraccarNotification>('/notifications', body);
+
+export const deleteNotification = (id: number): Promise<void> =>
+  traccarDelete(`/notifications/${id}`);
+
+export const linkNotificationToDevice = (deviceId: number, notificationId: number): Promise<void> =>
+  traccarPost<void>('/permissions', { deviceId, notificationId });
+
+export const setDeviceAttribute = async (
+  deviceId: number,
+  attributes: Record<string, unknown>
+): Promise<TraccarDevice> => {
+  const device = await getDevice(deviceId);
+  const merged = { ...device, attributes: { ...device.attributes, ...attributes } };
+  return traccarPut<TraccarDevice>(`/devices/${deviceId}`, merged);
+};
 
 // ── Commands ───────────────────────────────────────────────────────────────────
 
